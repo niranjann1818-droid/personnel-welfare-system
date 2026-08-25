@@ -4,6 +4,7 @@ import plotly.express as px
 import joblib
 import xgboost as xgb
 import os
+from pathlib import Path
 
 # ============================================================
 # PAGE SETTINGS
@@ -126,10 +127,10 @@ latest_df["ai_burnout_risk"], latest_df["ai_burnout_confidence"] = (
 # SIDEBAR
 # ============================================================
 
-logo_path = "tech_atelier_logo.jpeg"
+logo_path = Path(__file__).parent / "tech_atelier_logo.jpeg.jpeg"
 
-if os.path.exists(logo_path):
-    st.sidebar.image(logo_path, use_container_width=True)
+if logo_path.exists():
+    st.sidebar.image(str(logo_path), width = 180)
 
 st.sidebar.title("🛡️ Welfare System")
 st.sidebar.caption("SIH26186")
