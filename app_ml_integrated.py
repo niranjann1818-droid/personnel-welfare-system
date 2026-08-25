@@ -33,65 +33,188 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 
 # ------------------------------------------------------------
-# LOGIN PAGE
+# LOGIN PAGE - VISUAL DESIGN
 # ------------------------------------------------------------
-
 if not st.session_state.logged_in:
 
+    # ========================================================
+    # LOGIN PAGE DESIGN
+    # ========================================================
+
+    st.markdown("""
+    <style>
+
+    /* Background */
+    .stApp {
+        background:
+            radial-gradient(circle at 10% 20%,
+                rgba(37,99,235,0.10), transparent 28%),
+            radial-gradient(circle at 90% 80%,
+                rgba(14,165,233,0.10), transparent 30%),
+            linear-gradient(135deg,#f8fbff,#eef6ff);
+    }
+
+    /* Remove unnecessary top space */
+    .block-container {
+        padding-top: 3rem;
+    }
+
+    /* Login card */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 22px !important;
+        border: 1px solid rgba(148,163,184,0.25) !important;
+        box-shadow: 0 15px 40px rgba(30,64,175,0.10);
+        background: rgba(255,255,255,0.82);
+    }
+
+    /* Button */
+    div.stButton > button {
+        border-radius: 12px;
+        height: 48px;
+        font-weight: 700;
+    }
+
+    </style>
+    """, unsafe_allow_html=True)
+
+
+    # ========================================================
+    # BRAND HEADER
+    # ========================================================
+
     st.markdown(
-        """
-        <div style="text-align:center; padding-top:60px;">
-            <h1>🛡️ Personnel Welfare System</h1>
-            <h3>TECH ATELIER</h3>
-            <p>AI-Powered Predictive Welfare Monitoring</p>
-        </div>
-        """,
-        unsafe_allow_html=True
+        "## 🛡️ TECH ATELIER"
+    )
+
+    st.caption(
+        "Personnel Welfare Intelligence • AI-Powered Predictive Monitoring"
     )
 
     st.divider()
 
-    # Center the login box
-    left, center, right = st.columns([1, 1.5, 1])
 
-    with center:
+    # ========================================================
+    # MAIN LOGIN LAYOUT
+    # ========================================================
 
-        st.subheader("🔐 Secure Login")
+    left, right = st.columns([1.35, 0.85], gap="large")
 
-        username = st.text_input(
-            "Username",
-            placeholder="Enter username"
+
+    # ========================================================
+    # LEFT SIDE – PROBLEM STATEMENT
+    # ========================================================
+
+    with left:
+
+        st.markdown("### 🧠 Personnel Welfare Intelligence")
+
+        st.markdown(
+            """
+            #### Protecting personnel through early risk identification
+
+            Personnel working under demanding conditions may experience
+            **stress, fatigue, excessive workload and reduced wellbeing**.
+
+            This system uses personnel welfare indicators and an
+            **AI-powered XGBoost model** to identify potential burnout-risk
+            patterns and support welfare decision-making.
+            """
         )
 
-        password = st.text_input(
-            "Password",
-            type="password",
-            placeholder="Enter password"
+        st.divider()
+
+        f1, f2 = st.columns(2)
+
+        with f1:
+            st.info(
+                "🧠 **Stress Monitoring**\n\n"
+                "Tracks stress-related welfare indicators."
+            )
+
+        with f2:
+            st.info(
+                "💤 **Fatigue Analysis**\n\n"
+                "Considers fatigue, sleep and workload patterns."
+            )
+
+        f3, f4 = st.columns(2)
+
+        with f3:
+            st.info(
+                "📊 **Risk Analytics**\n\n"
+                "Provides organization-level welfare trends."
+            )
+
+        with f4:
+            st.info(
+                "🤖 **AI Prediction**\n\n"
+                "FORCEFLOW XGBoost estimates burnout-risk categories."
+            )
+
+        st.success(
+            "🛡️ Early Detection  →  Better Welfare  →  Stronger Personnel"
         )
 
-        if st.button(
-            "🔐 Login",
-            type="primary",
-            use_container_width=True
-        ):
 
-            if username in USERS and USERS[username] == password:
+    # ========================================================
+    # RIGHT SIDE – LOGIN CARD
+    # ========================================================
 
-                st.session_state.logged_in = True
-                st.session_state.username = username
+    with right:
 
-                st.success("Login successful!")
+        with st.container(border=True):
 
-                st.rerun()
+            st.markdown("### 🔐 Secure Login")
 
-            else:
+            st.caption(
+                "Authorized welfare personnel only"
+            )
 
-                st.error(
-                    "Invalid username or password."
-                )
+            username = st.text_input(
+                "Username",
+                placeholder="Enter username"
+            )
+
+            password = st.text_input(
+                "Password",
+                type="password",
+                placeholder="Enter password"
+            )
+
+            if st.button(
+                "🔐 Login",
+                type="primary",
+                use_container_width=True
+            ):
+
+                if username in USERS and USERS[username] == password:
+
+                    st.session_state.logged_in = True
+                    st.session_state.username = username
+
+                    st.success("Login successful!")
+
+                    st.rerun()
+
+                else:
+
+                    st.error(
+                        "Invalid username or password."
+                    )
+
+            st.caption(
+                "Privacy-first welfare monitoring • "
+                "AI-assisted decision support"
+            )
+
+
+    st.divider()
+
+    st.caption(
+        "TECH ATELIER • Personnel Stress & Welfare Monitoring System"
+    )
 
     st.stop()
-
 # ============================================================
 # LOAD DATASET
 # ============================================================
@@ -231,7 +354,71 @@ st.sidebar.info(
     "Privacy-first welfare monitoring system "
     "designed for authorized welfare personnel."
 )
+# ============================================================
+# MODERN UI STYLING
+# ============================================================
 
+st.markdown("""
+<style>
+
+    /* Main background */
+    .stApp {
+        background:
+            radial-gradient(circle at 90% 10%, rgba(37, 99, 235, 0.08), transparent 25%),
+            radial-gradient(circle at 10% 90%, rgba(14, 165, 233, 0.06), transparent 25%),
+            #f7faff;
+    }
+
+    /* Main content */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+
+    /* Metric cards */
+    div[data-testid="stMetric"] {
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 18px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+    }
+
+    div[data-testid="stMetricLabel"] {
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    div[data-testid="stMetricValue"] {
+        color: #0f172a;
+        font-weight: 700;
+    }
+
+    /* Section headings */
+    h1, h2, h3 {
+        color: #0f172a;
+    }
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%);
+        border-right: 1px solid #dbeafe;
+    }
+
+    /* Info / success / warning boxes */
+    div[data-testid="stAlert"] {
+        border-radius: 14px;
+    }
+
+    /* Dataframes */
+    div[data-testid="stDataFrame"] {
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+    }
+
+</style>
+""", unsafe_allow_html=True)
 # ============================================================
 # DASHBOARD
 # ============================================================
