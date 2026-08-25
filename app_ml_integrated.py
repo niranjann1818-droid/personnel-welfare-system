@@ -15,6 +15,82 @@ st.set_page_config(
     page_icon="🛡️",
     layout="wide"
 )
+# ============================================================
+# LOGIN SYSTEM
+# ============================================================
+
+# Demo credentials for SIH prototype
+USERS = {
+    "admin": "admin123",
+    "welfare": "welfare123"
+}
+
+# Initialize login state
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if "username" not in st.session_state:
+    st.session_state.username = ""
+
+# ------------------------------------------------------------
+# LOGIN PAGE
+# ------------------------------------------------------------
+
+if not st.session_state.logged_in:
+
+    st.markdown(
+        """
+        <div style="text-align:center; padding-top:60px;">
+            <h1>🛡️ Personnel Welfare System</h1>
+            <h3>TECH ATELIER</h3>
+            <p>AI-Powered Predictive Welfare Monitoring</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.divider()
+
+    # Center the login box
+    left, center, right = st.columns([1, 1.5, 1])
+
+    with center:
+
+        st.subheader("🔐 Secure Login")
+
+        username = st.text_input(
+            "Username",
+            placeholder="Enter username"
+        )
+
+        password = st.text_input(
+            "Password",
+            type="password",
+            placeholder="Enter password"
+        )
+
+        if st.button(
+            "🔐 Login",
+            type="primary",
+            use_container_width=True
+        ):
+
+            if username in USERS and USERS[username] == password:
+
+                st.session_state.logged_in = True
+                st.session_state.username = username
+
+                st.success("Login successful!")
+
+                st.rerun()
+
+            else:
+
+                st.error(
+                    "Invalid username or password."
+                )
+
+    st.stop()
 
 # ============================================================
 # LOAD DATASET
