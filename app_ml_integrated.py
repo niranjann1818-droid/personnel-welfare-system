@@ -242,18 +242,17 @@ def load_data():
 
 
 df = load_data()
-
 # ============================================================
-# LOAD TRAINED ML MODEL
+# LOAD TRAINED ML MODEL - NEW FORCEFLOW MODEL
 # ============================================================
 
 @st.cache_resource
 def load_ml_model():
     model = xgb.XGBClassifier()
-    model.load_model("forceflow_model.json")
+    model.load_model("forceflow_new_model.json")
     return model
-ml_model = load_ml_model()
-    # These are the exact 26 features used to train forceflow_model.pkl
+ml_model = load_ml_model()    
+# These are the exact 26 features used to train forceflow_model.pkl
 ML_FEATURES = [
     "week",
     "duty_hours",
@@ -261,15 +260,8 @@ ML_FEATURES = [
     "overtime_hours",
     "workload_score",
     "sleep_hours",
-    "fatigue_score",
-    "stress_score",
-    "mood_score",
-    "emotional_exhaustion",
     "attendance_score",
-    "activity_level",
     "performance_score",
-    "social_withdrawal",
-    "behavioral_change",
     "age",
     "service_years",
     "rank_level",
@@ -281,8 +273,8 @@ ML_FEATURES = [
     "leave_days",
     "days_since_last_leave",
     "leave_frequency",
+    "stress_risk_score",
 ]
-
 # rank_level was label-encoded alphabetically during model training.
 RANK_MAP = {
     "Intermediate": 0,
@@ -294,9 +286,10 @@ RANK_MAP = {
 # Based on the notebook's class mapping and the dataset labels:
 # 0 = High, 1 = Low, 2 = Moderate.
 ML_RISK_MAP = {
-    0: "High",
-    1: "Low",
-    2: "Moderate",
+    0: "Critical",
+    1: "High",
+    2: "Low",
+    3: "Moderate",
 }
 
 def predict_ml_burnout(dataframe):
@@ -309,9 +302,7 @@ def predict_ml_burnout(dataframe):
     X = X.replace([float("inf"), float("-inf")], 0).fillna(0)
 
     predictions = ml_model.predict(X).astype(int)
-    print("DEBUG PREDICTION:", predictions)
-    print("DEBUG MODEL CLASSES:", ml_model.classes_)
-
+   
     probabilities = ml_model.predict_proba(X)
 
     confidence = probabilities.max(axis=1) * 100
@@ -328,15 +319,14 @@ def predict_ml_burnout(dataframe):
 # Latest record for every personnel
 latest_df = (
     df.sort_values("week")
-    .groupby("personnel_id")
-    .tail(1)
-    .reset_index(drop=True)
+      .groupby("personnel_id")
+      .tail(1)
+      .reset_index(drop=True)
 )
 
 # ML prediction for the latest record of each personnel
-latest_df["ai_burnout_risk"], latest_df["ai_burnout_confidence"] = (
-    predict_ml_burnout(latest_df)
-)
+latest_df["ai_burnout_risk"], latest_df["ai_burnout_confidence"] = predict_ml_burnout(latest_df)
+
 
 # ============================================================
 # SIDEBAR
@@ -605,7 +595,6 @@ if page == "🏠 Dashboard":
         hide_index=True
     )
 
-
 # ============================================================
 # PERSONNEL ANALYSIS
 # ============================================================
@@ -613,6 +602,10 @@ if page == "🏠 Dashboard":
 elif page == "👤 Personnel Analysis":
 
     st.title("👤 Personnel Analysis")
+
+    st.caption(
+        "Individual personnel welfare and stress-risk analysis"
+    )
 
     personnel_list = sorted(
         df["personnel_id"].unique()
@@ -632,11 +625,11 @@ elif page == "👤 Personnel Analysis":
     st.divider()
 
     # ========================================================
-    # PROFILE
+    # PERSONNEL PROFILE
     # ========================================================
 
     st.subheader(
-        f"Personnel Profile — {selected_person}"
+        f"👤 Personnel Profile — {selected_person}"
     )
 
     c1, c2, c3, c4 = st.columns(4)
@@ -652,22 +645,146 @@ elif page == "👤 Personnel Analysis":
     )
 
     c3.metric(
-        "Deployment Days",
-        latest["deployment_days"]
+        "Rank Level",
+        latest["rank_level"]
     )
 
     c4.metric(
-        "Workload Score",
-        latest["workload_score"]
+        "Week",
+        latest["week"]
     )
 
     st.divider()
 
     # ========================================================
-    # CURRENT WELFARE RISK
+    # WORK & DUTY INFORMATION
     # ========================================================
 
-    st.subheader("Current Welfare Risk")
+    st.subheader("💼 Work & Duty Information")
+
+    c1, c2, c3 = st.columns(3)
+
+    c1.metric(
+        "Duty Hours",
+        f"{latest['duty_hours']:.1f}"
+    )
+
+    c2.metric(
+        "Consecutive Duty Days",
+        latest["consecutive_duty_days"]
+    )
+
+    c3.metric(
+        "Overtime Hours",
+        f"{latest['overtime_hours']:.1f}"
+    )
+
+    c1, c2, c3 = st.columns(3)
+
+    c1.metric(
+        "Workload Score",
+        f"{latest['workload_score']:.1f}"
+    )
+
+    c2.metric(
+        "Sleep Hours",
+        f"{latest['sleep_hours']:.1f}"
+    )
+
+    c3.metric(
+        "Attendance Score",
+        f"{latest['attendance_score']:.1f}"
+    )
+
+    st.divider()
+
+    # ========================================================
+    # PERFORMANCE
+    # ========================================================
+
+    st.subheader("📊 Performance Information")
+
+    c1, c2 = st.columns(2)
+
+    c1.metric(
+        "Performance Score",
+        f"{latest['performance_score']:.1f}"
+    )
+
+    c2.metric(
+        "Stress Risk Score",
+        f"{latest['stress_risk_score']:.1f}"
+    )
+
+    st.divider()
+
+    # ========================================================
+    # SERVICE & DEPLOYMENT
+    # ========================================================
+
+    st.subheader("🛡️ Service & Deployment")
+
+    c1, c2, c3 = st.columns(3)
+
+    c1.metric(
+        "Transfer Frequency",
+        latest["transfer_frequency"]
+    )
+
+    c2.metric(
+        "Training Hours",
+        f"{latest['training_hours']:.1f}"
+    )
+
+    c3.metric(
+        "Deployment Days",
+        latest["deployment_days"]
+    )
+
+    c1, c2 = st.columns(2)
+
+    c1.metric(
+        "Deployment Frequency",
+        latest["deployment_frequency"]
+    )
+
+    c2.metric(
+        "Operational Exposure",
+        f"{latest['operational_exposure']:.1f}"
+    )
+
+    st.divider()
+
+    # ========================================================
+    # LEAVE INFORMATION
+    # ========================================================
+
+    st.subheader("🌴 Leave Information")
+
+    c1, c2, c3 = st.columns(3)
+
+    c1.metric(
+        "Leave Days",
+        latest["leave_days"]
+    )
+
+    c2.metric(
+        "Days Since Last Leave",
+        latest["days_since_last_leave"]
+    )
+
+    c3.metric(
+        "Leave Frequency",
+        latest["leave_frequency"]
+    )
+
+    st.divider()
+
+    # ========================================================
+    # CURRENT STRESS RISK
+    # ========================================================
+
+    st.subheader("⚠️ Current Stress Risk")
 
     c1, c2 = st.columns(2)
 
@@ -678,43 +795,38 @@ elif page == "👤 Personnel Analysis":
             latest["stress_risk"]
         )
 
-        st.write(
-            f"Risk Score: {latest['stress_risk_score']:.1f}"
-        )
-
     with c2:
 
         st.metric(
-            "Burnout Risk",
-            latest["burnout_risk"]
-        )
-
-        st.write(
-            f"Risk Score: {latest['burnout_risk_score']:.1f}"
+            "Stress Risk Score",
+            f"{latest['stress_risk_score']:.1f}"
         )
 
     # ========================================================
-    # AI BURNOUT PREDICTION
+    # AI PREDICTION
     # ========================================================
 
-    st.subheader("🤖 AI Predicted Burnout Risk")
+    st.subheader("🤖 AI Predicted Stress Risk")
 
     ai_risk, ai_confidence = predict_ml_burnout(
         person_data.iloc[[-1]]
     )
 
     ai_risk_value = ai_risk.iloc[0]
+
     ai_confidence_value = ai_confidence.iloc[0]
 
     ai_c1, ai_c2 = st.columns(2)
 
     with ai_c1:
+
         st.metric(
-            "ML Burnout Risk",
+            "ML Stress Risk",
             ai_risk_value
         )
 
     with ai_c2:
+
         st.metric(
             "Prediction Confidence",
             f"{ai_confidence_value:.1f}%"
@@ -728,7 +840,7 @@ elif page == "👤 Personnel Analysis":
     st.divider()
 
     # ========================================================
-    # STRESS TREND
+    # STRESS RISK TREND
     # ========================================================
 
     st.subheader("📈 Stress Risk Trend")
@@ -749,54 +861,61 @@ elif page == "👤 Personnel Analysis":
         use_container_width=True
     )
 
-    # ========================================================
-    # BURNOUT TREND
-    # ========================================================
-
-    st.subheader("📈 Burnout Risk Trend")
-
-    fig2 = px.line(
-        person_data,
-        x="week",
-        y="burnout_risk_score",
-        markers=True,
-        labels={
-            "week": "Week",
-            "burnout_risk_score": "Burnout Risk Score"
-        }
-    )
-
-    st.plotly_chart(
-        fig2,
-        use_container_width=True
-    )
-
     st.divider()
 
     # ========================================================
     # CONTRIBUTING FACTORS
     # ========================================================
 
-    st.subheader("🔎 Factors Contributing to Current Risk")
+    st.subheader(
+        "🔎 Current Welfare Indicators"
+    )
 
     indicators = {
-        "Workload Score": latest["workload_score"],
-        "Stress Score": latest["stress_score"],
-        "Fatigue Score": latest["fatigue_score"],
-        "Emotional Exhaustion": latest["emotional_exhaustion"],
-        "Sleep Hours": latest["sleep_hours"],
-        "Overtime Hours": latest["overtime_hours"],
-        "Consecutive Duty Days": latest["consecutive_duty_days"],
-        "Leave Days": latest["leave_days"],
-        "Days Since Last Leave": latest["days_since_last_leave"],
-        "Deployment Days": latest["deployment_days"],
-        "Social Withdrawal": latest["social_withdrawal"],
-        "Behavioral Change": latest["behavioral_change"]
+
+        "Duty Hours":
+            latest["duty_hours"],
+
+        "Consecutive Duty Days":
+            latest["consecutive_duty_days"],
+
+        "Overtime Hours":
+            latest["overtime_hours"],
+
+        "Workload Score":
+            latest["workload_score"],
+
+        "Sleep Hours":
+            latest["sleep_hours"],
+
+        "Attendance Score":
+            latest["attendance_score"],
+
+        "Performance Score":
+            latest["performance_score"],
+
+        "Stress Risk Score":
+            latest["stress_risk_score"],
+
+        "Deployment Days":
+            latest["deployment_days"],
+
+        "Operational Exposure":
+            latest["operational_exposure"],
+
+        "Leave Days":
+            latest["leave_days"],
+
+        "Days Since Last Leave":
+            latest["days_since_last_leave"]
     }
 
     indicator_df = pd.DataFrame(
         list(indicators.items()),
-        columns=["Indicator", "Value"]
+        columns=[
+            "Indicator",
+            "Value"
+        ]
     )
 
     st.dataframe(
@@ -804,6 +923,8 @@ elif page == "👤 Personnel Analysis":
         use_container_width=True,
         hide_index=True
     )
+
+    st.divider()
 
     # ========================================================
     # WELFARE OBSERVATION
@@ -814,23 +935,33 @@ elif page == "👤 Personnel Analysis":
     observations = []
 
     if latest["workload_score"] >= 7:
-        observations.append("High workload")
 
-    if latest["fatigue_score"] >= 7:
-        observations.append("Elevated fatigue")
-
-    if latest["stress_score"] >= 7:
-        observations.append("Elevated stress")
+        observations.append(
+            "High workload"
+        )
 
     if latest["sleep_hours"] < 6:
-        observations.append("Reduced sleep duration")
+
+        observations.append(
+            "Reduced sleep duration"
+        )
 
     if latest["overtime_hours"] >= 15:
-        observations.append("High overtime")
+
+        observations.append(
+            "High overtime"
+        )
 
     if latest["consecutive_duty_days"] >= 10:
+
         observations.append(
             "Extended consecutive duty"
+        )
+
+    if latest["stress_risk_score"] >= 75:
+
+        observations.append(
+            "High stress-risk score"
         )
 
     if observations:
@@ -852,7 +983,7 @@ elif page == "👤 Personnel Analysis":
     # WELFARE ACTION
     # ========================================================
 
-    st.subheader("💡 Suggested Welfare Action")
+    st.subheader(" Suggested Welfare Action")
 
     if latest["stress_risk"] == "Critical":
 
@@ -880,8 +1011,9 @@ elif page == "👤 Personnel Analysis":
 
         st.success(
             "Continue routine welfare monitoring and "
-            "healthy work-rest practices."
+            "maintain healthy workload and rest patterns."
         )
+
 # ============================================================
 # ADD NEW PERSONNEL
 # ============================================================
@@ -889,8 +1021,9 @@ elif page == "👤 Personnel Analysis":
 elif page == "➕ Add Personnel":
 
     st.title("➕ Add New Personnel")
+
     st.caption(
-        "Enter personnel welfare information to generate an AI burnout-risk prediction."
+        "Enter personnel welfare information to generate an AI stress-risk prediction."
     )
 
     st.divider()
@@ -901,21 +1034,21 @@ elif page == "➕ Add Personnel":
         "and not a medical diagnosis."
     )
 
-    # --------------------------------------------------------
-    # BASIC INFORMATION
-    # --------------------------------------------------------
+    # ========================================================
+    # PERSONNEL INFORMATION
+    # ========================================================
 
     st.subheader("👤 Personnel Information")
 
     c1, c2, c3 = st.columns(3)
 
     with c1:
+
         personnel_id = st.text_input(
             "Personnel ID",
             placeholder="Example: P5001"
         )
 
-    with c2:
         week = st.number_input(
             "Week",
             min_value=1,
@@ -923,7 +1056,6 @@ elif page == "➕ Add Personnel":
             step=1
         )
 
-    with c3:
         age = st.number_input(
             "Age",
             min_value=18,
@@ -932,9 +1064,6 @@ elif page == "➕ Add Personnel":
             step=1
         )
 
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
         service_years = st.number_input(
             "Service Years",
             min_value=0,
@@ -944,12 +1073,16 @@ elif page == "➕ Add Personnel":
         )
 
     with c2:
+
         rank_level = st.selectbox(
             "Rank Level",
-            ["Junior", "Intermediate", "Senior"]
+            [
+                "Junior",
+                "Intermediate",
+                "Senior"
+            ]
         )
 
-    with c3:
         duty_hours = st.number_input(
             "Duty Hours",
             min_value=0.0,
@@ -958,17 +1091,6 @@ elif page == "➕ Add Personnel":
             step=0.5
         )
 
-    st.divider()
-
-    # --------------------------------------------------------
-    # WORK & FATIGUE
-    # --------------------------------------------------------
-
-    st.subheader("💼 Work & Fatigue")
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
         consecutive_duty_days = st.number_input(
             "Consecutive Duty Days",
             min_value=0,
@@ -976,7 +1098,6 @@ elif page == "➕ Add Personnel":
             step=1
         )
 
-    with c2:
         overtime_hours = st.number_input(
             "Overtime Hours",
             min_value=0.0,
@@ -985,6 +1106,7 @@ elif page == "➕ Add Personnel":
         )
 
     with c3:
+
         workload_score = st.slider(
             "Workload Score",
             0.0,
@@ -993,9 +1115,6 @@ elif page == "➕ Add Personnel":
             0.1
         )
 
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
         sleep_hours = st.number_input(
             "Sleep Hours",
             min_value=0.0,
@@ -1004,102 +1123,34 @@ elif page == "➕ Add Personnel":
             step=0.5
         )
 
-    with c2:
-        fatigue_score = st.slider(
-            "Fatigue Score",
-            0.0,
-            10.0,
-            5.0,
-            0.1
+        attendance_score = st.number_input(
+            "Attendance Score",
+            min_value=0.0,
+            max_value=100.0,
+            value=90.0,
+            step=0.1
         )
 
-    with c3:
-        stress_score = st.slider(
-            "Stress Score",
-            0.0,
-            10.0,
-            5.0,
-            0.1
+        performance_score = st.number_input(
+            "Performance Score",
+            min_value=0.0,
+            max_value=100.0,
+            value=80.0,
+            step=0.1
         )
 
     st.divider()
 
-    # --------------------------------------------------------
-    # WELLBEING
-    # --------------------------------------------------------
+    # ========================================================
+    # SERVICE & DEPLOYMENT
+    # ========================================================
 
-    st.subheader("🧠 Wellbeing Indicators")
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        mood_score = st.slider(
-            "Mood Score",
-            0.0,
-            10.0,
-            5.0,
-            0.1
-        )
-
-    with c2:
-        emotional_exhaustion = st.slider(
-            "Emotional Exhaustion",
-            0.0,
-            10.0,
-            5.0,
-            0.1
-        )
-
-    with c3:
-        attendance_score = st.slider(
-            "Attendance Score",
-            0.0,
-            10.0,
-            8.0,
-            0.1
-        )
+    st.subheader("🛡️ Service & Deployment")
 
     c1, c2, c3 = st.columns(3)
 
     with c1:
-        activity_level = st.slider(
-            "Activity Level",
-            0.0,
-            10.0,
-            5.0,
-            0.1
-        )
 
-    with c2:
-        performance_score = st.slider(
-            "Performance Score",
-            0.0,
-            10.0,
-            7.0,
-            0.1
-        )
-
-    with c3:
-        social_withdrawal = st.slider(
-            "Social Withdrawal",
-            0.0,
-            10.0,
-            3.0,
-            0.1
-        )
-
-    c1, c2 = st.columns(2)
-
-    with c1:
-        behavioral_change = st.slider(
-            "Behavioral Change",
-            0.0,
-            10.0,
-            3.0,
-            0.1
-        )
-
-    with c2:
         transfer_frequency = st.number_input(
             "Transfer Frequency",
             min_value=0,
@@ -1107,17 +1158,6 @@ elif page == "➕ Add Personnel":
             step=1
         )
 
-    st.divider()
-
-    # --------------------------------------------------------
-    # SERVICE & DEPLOYMENT
-    # --------------------------------------------------------
-
-    st.subheader("🛡️ Service & Deployment")
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
         training_hours = st.number_input(
             "Training Hours",
             min_value=0.0,
@@ -1125,7 +1165,6 @@ elif page == "➕ Add Personnel":
             step=1.0
         )
 
-    with c2:
         deployment_days = st.number_input(
             "Deployment Days",
             min_value=0,
@@ -1133,7 +1172,8 @@ elif page == "➕ Add Personnel":
             step=1
         )
 
-    with c3:
+    with c2:
+
         deployment_frequency = st.number_input(
             "Deployment Frequency",
             min_value=0,
@@ -1141,9 +1181,6 @@ elif page == "➕ Add Personnel":
             step=1
         )
 
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
         operational_exposure = st.number_input(
             "Operational Exposure",
             min_value=0.0,
@@ -1151,7 +1188,6 @@ elif page == "➕ Add Personnel":
             step=0.5
         )
 
-    with c2:
         leave_days = st.number_input(
             "Leave Days",
             min_value=0,
@@ -1160,6 +1196,7 @@ elif page == "➕ Add Personnel":
         )
 
     with c3:
+
         days_since_last_leave = st.number_input(
             "Days Since Last Leave",
             min_value=0,
@@ -1167,80 +1204,122 @@ elif page == "➕ Add Personnel":
             step=1
         )
 
-    leave_frequency = st.number_input(
-        "Leave Frequency",
-        min_value=0,
-        value=2,
-        step=1
-    )
+        leave_frequency = st.number_input(
+            "Leave Frequency",
+            min_value=0,
+            value=2,
+            step=1
+        )
+
+        stress_risk_score = st.number_input(
+            "Stress Risk Score",
+            min_value=0.0,
+            max_value=100.0,
+            value=50.0,
+            step=0.1
+        )
 
     st.divider()
 
-    # --------------------------------------------------------
+    # ========================================================
     # PREDICT
-    # --------------------------------------------------------
+    # ========================================================
 
     if st.button(
-        "🤖 Predict Burnout Risk",
+        "🤖 Predict Stress Risk",
         type="primary",
         use_container_width=True
     ):
 
         if not personnel_id.strip():
-            st.error("Please enter a Personnel ID.")
+
+            st.error(
+                "Please enter a Personnel ID."
+            )
+
             st.stop()
 
-        # Create one row using the EXACT model feature names.
+        # ====================================================
+        # CREATE NEW PERSON RECORD
+        # ====================================================
+
         new_person = pd.DataFrame([{
+
             "week": week,
+
             "duty_hours": duty_hours,
+
             "consecutive_duty_days": consecutive_duty_days,
+
             "overtime_hours": overtime_hours,
+
             "workload_score": workload_score,
+
             "sleep_hours": sleep_hours,
-            "fatigue_score": fatigue_score,
-            "stress_score": stress_score,
-            "mood_score": mood_score,
-            "emotional_exhaustion": emotional_exhaustion,
+
             "attendance_score": attendance_score,
-            "activity_level": activity_level,
+
             "performance_score": performance_score,
-            "social_withdrawal": social_withdrawal,
-            "behavioral_change": behavioral_change,
+
             "age": age,
+
             "service_years": service_years,
+
             "rank_level": rank_level,
+
             "transfer_frequency": transfer_frequency,
+
             "training_hours": training_hours,
+
             "deployment_days": deployment_days,
+
             "deployment_frequency": deployment_frequency,
+
             "operational_exposure": operational_exposure,
+
             "leave_days": leave_days,
+
             "days_since_last_leave": days_since_last_leave,
-            "leave_frequency": leave_frequency
+
+            "leave_frequency": leave_frequency,
+
+            "stress_risk_score": stress_risk_score
+
         }])
 
-        # Run the trained ML model.
+        # ====================================================
+        # RUN ML MODEL
+        # ====================================================
+
         prediction, confidence = predict_ml_burnout(
             new_person
         )
 
         predicted_risk = prediction.iloc[0]
+
         predicted_confidence = confidence.iloc[0]
+
+        # ====================================================
+        # DISPLAY RESULT
+        # ====================================================
 
         st.divider()
 
-        st.subheader("🤖 AI Prediction Result")
+        st.subheader(
+            "🤖 AI Stress-Risk Prediction"
+        )
 
         r1, r2 = st.columns(2)
 
         with r1:
+
             st.metric(
-                "Predicted Burnout Risk",
+                "Predicted Stress Risk",
                 predicted_risk
             )
 
         with r2:
+
             st.metric(
                 "Prediction Confidence",
                 f"{predicted_confidence:.1f}%"
@@ -1248,7 +1327,7 @@ elif page == "➕ Add Personnel":
 
         st.success(
             f"Personnel {personnel_id} has been assessed "
-            f"with an AI burnout-risk category of "
+            f"with an AI stress-risk category of "
             f"**{predicted_risk}**."
         )
 
@@ -1257,19 +1336,27 @@ elif page == "➕ Add Personnel":
             "and is not a medical diagnosis."
         )
 
+        # ====================================================
+        # SUBMITTED INFORMATION
+        # ====================================================
+
         st.divider()
 
-        st.subheader("📋 Submitted Personnel Information")
+        st.subheader(
+            "📋 Submitted Personnel Information"
+        )
 
         display_data = new_person.copy()
+
         display_data.insert(
             0,
             "personnel_id",
             personnel_id
         )
 
-        display_data["ai_burnout_risk"] = predicted_risk
-        display_data["ai_burnout_confidence"] = (
+        display_data["ai_stress_risk"] = predicted_risk
+
+        display_data["ai_stress_confidence"] = (
             predicted_confidence
         )
 
@@ -1278,7 +1365,6 @@ elif page == "➕ Add Personnel":
             use_container_width=True,
             hide_index=True
         )
-
 
 # ============================================================
 # RISK ANALYTICS
