@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import joblib
 import xgboost as xgb
+import os
 
 # ============================================================
 # PAGE SETTINGS
@@ -84,19 +85,30 @@ ML_RISK_MAP = {
 
 def predict_ml_burnout(dataframe):
     """Return ML burnout-risk prediction and confidence for each row."""
+
     X = dataframe[ML_FEATURES].copy()
+
     X["rank_level"] = X["rank_level"].map(RANK_MAP)
+
     X = X.replace([float("inf"), float("-inf")], 0).fillna(0)
 
     predictions = ml_model.predict(X).astype(int)
+    print("DEBUG PREDICTION:", predictions)
+    print("DEBUG MODEL CLASSES:", ml_model.classes_)
+
     probabilities = ml_model.predict_proba(X)
+
     confidence = probabilities.max(axis=1) * 100
 
+    risk_labels = pd.Series(
+        predictions,
+        index=dataframe.index
+    ).map(ML_RISK_MAP)
+
     return (
-        pd.Series(predictions, index=dataframe.index).map(ML_RISK_MAP),
+        risk_labels,
         pd.Series(confidence, index=dataframe.index),
     )
-
 # Latest record for every personnel
 latest_df = (
     df.sort_values("week")
@@ -114,8 +126,14 @@ latest_df["ai_burnout_risk"], latest_df["ai_burnout_confidence"] = (
 # SIDEBAR
 # ============================================================
 
+logo_path = "tech_atelier_logo.jpeg"
+
+if os.path.exists(logo_path):
+    st.sidebar.image(logo_path, use_container_width=True)
+
 st.sidebar.title("🛡️ Welfare System")
 st.sidebar.caption("SIH26186")
+
 
 st.sidebar.divider()
 
@@ -124,12 +142,12 @@ page = st.sidebar.radio(
     [
         "🏠 Dashboard",
         "👤 Personnel Analysis",
+        "➕ Add Personnel",
         "📊 Risk Analytics",
         "⚠️ Alerts",
         "💡 Recommendations"
     ]
 )
-
 st.sidebar.divider()
 
 st.sidebar.info(
@@ -251,7 +269,7 @@ if page == "🏠 Dashboard":
 
     with right:
 
-        st.subheader("🔥 Burnout Risk Distribution")
+        st.subheader("Burnout Risk Distribution")
 
         burnout_counts = (
             latest_df["burnout_risk"]
@@ -583,6 +601,402 @@ elif page == "👤 Personnel Analysis":
         st.success(
             "Continue routine welfare monitoring and "
             "healthy work-rest practices."
+        )
+# ============================================================
+# ADD NEW PERSONNEL
+# ============================================================
+
+elif page == "➕ Add Personnel":
+
+    st.title("➕ Add New Personnel")
+    st.caption(
+        "Enter personnel welfare information to generate an AI burnout-risk prediction."
+    )
+
+    st.divider()
+
+    st.info(
+        "The information entered here is processed using the trained "
+        "FORCEFLOW XGBoost model. This is a welfare-risk prediction "
+        "and not a medical diagnosis."
+    )
+
+    # --------------------------------------------------------
+    # BASIC INFORMATION
+    # --------------------------------------------------------
+
+    st.subheader("👤 Personnel Information")
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        personnel_id = st.text_input(
+            "Personnel ID",
+            placeholder="Example: P5001"
+        )
+
+    with c2:
+        week = st.number_input(
+            "Week",
+            min_value=1,
+            value=1,
+            step=1
+        )
+
+    with c3:
+        age = st.number_input(
+            "Age",
+            min_value=18,
+            max_value=80,
+            value=30,
+            step=1
+        )
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        service_years = st.number_input(
+            "Service Years",
+            min_value=0,
+            max_value=50,
+            value=5,
+            step=1
+        )
+
+    with c2:
+        rank_level = st.selectbox(
+            "Rank Level",
+            ["Junior", "Intermediate", "Senior"]
+        )
+
+    with c3:
+        duty_hours = st.number_input(
+            "Duty Hours",
+            min_value=0.0,
+            max_value=24.0,
+            value=8.0,
+            step=0.5
+        )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # WORK & FATIGUE
+    # --------------------------------------------------------
+
+    st.subheader("💼 Work & Fatigue")
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        consecutive_duty_days = st.number_input(
+            "Consecutive Duty Days",
+            min_value=0,
+            value=5,
+            step=1
+        )
+
+    with c2:
+        overtime_hours = st.number_input(
+            "Overtime Hours",
+            min_value=0.0,
+            value=5.0,
+            step=0.5
+        )
+
+    with c3:
+        workload_score = st.slider(
+            "Workload Score",
+            0.0,
+            10.0,
+            5.0,
+            0.1
+        )
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        sleep_hours = st.number_input(
+            "Sleep Hours",
+            min_value=0.0,
+            max_value=24.0,
+            value=7.0,
+            step=0.5
+        )
+
+    with c2:
+        fatigue_score = st.slider(
+            "Fatigue Score",
+            0.0,
+            10.0,
+            5.0,
+            0.1
+        )
+
+    with c3:
+        stress_score = st.slider(
+            "Stress Score",
+            0.0,
+            10.0,
+            5.0,
+            0.1
+        )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # WELLBEING
+    # --------------------------------------------------------
+
+    st.subheader("🧠 Wellbeing Indicators")
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        mood_score = st.slider(
+            "Mood Score",
+            0.0,
+            10.0,
+            5.0,
+            0.1
+        )
+
+    with c2:
+        emotional_exhaustion = st.slider(
+            "Emotional Exhaustion",
+            0.0,
+            10.0,
+            5.0,
+            0.1
+        )
+
+    with c3:
+        attendance_score = st.slider(
+            "Attendance Score",
+            0.0,
+            10.0,
+            8.0,
+            0.1
+        )
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        activity_level = st.slider(
+            "Activity Level",
+            0.0,
+            10.0,
+            5.0,
+            0.1
+        )
+
+    with c2:
+        performance_score = st.slider(
+            "Performance Score",
+            0.0,
+            10.0,
+            7.0,
+            0.1
+        )
+
+    with c3:
+        social_withdrawal = st.slider(
+            "Social Withdrawal",
+            0.0,
+            10.0,
+            3.0,
+            0.1
+        )
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+        behavioral_change = st.slider(
+            "Behavioral Change",
+            0.0,
+            10.0,
+            3.0,
+            0.1
+        )
+
+    with c2:
+        transfer_frequency = st.number_input(
+            "Transfer Frequency",
+            min_value=0,
+            value=1,
+            step=1
+        )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # SERVICE & DEPLOYMENT
+    # --------------------------------------------------------
+
+    st.subheader("🛡️ Service & Deployment")
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        training_hours = st.number_input(
+            "Training Hours",
+            min_value=0.0,
+            value=20.0,
+            step=1.0
+        )
+
+    with c2:
+        deployment_days = st.number_input(
+            "Deployment Days",
+            min_value=0,
+            value=10,
+            step=1
+        )
+
+    with c3:
+        deployment_frequency = st.number_input(
+            "Deployment Frequency",
+            min_value=0,
+            value=1,
+            step=1
+        )
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        operational_exposure = st.number_input(
+            "Operational Exposure",
+            min_value=0.0,
+            value=5.0,
+            step=0.5
+        )
+
+    with c2:
+        leave_days = st.number_input(
+            "Leave Days",
+            min_value=0,
+            value=10,
+            step=1
+        )
+
+    with c3:
+        days_since_last_leave = st.number_input(
+            "Days Since Last Leave",
+            min_value=0,
+            value=30,
+            step=1
+        )
+
+    leave_frequency = st.number_input(
+        "Leave Frequency",
+        min_value=0,
+        value=2,
+        step=1
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # PREDICT
+    # --------------------------------------------------------
+
+    if st.button(
+        "🤖 Predict Burnout Risk",
+        type="primary",
+        use_container_width=True
+    ):
+
+        if not personnel_id.strip():
+            st.error("Please enter a Personnel ID.")
+            st.stop()
+
+        # Create one row using the EXACT model feature names.
+        new_person = pd.DataFrame([{
+            "week": week,
+            "duty_hours": duty_hours,
+            "consecutive_duty_days": consecutive_duty_days,
+            "overtime_hours": overtime_hours,
+            "workload_score": workload_score,
+            "sleep_hours": sleep_hours,
+            "fatigue_score": fatigue_score,
+            "stress_score": stress_score,
+            "mood_score": mood_score,
+            "emotional_exhaustion": emotional_exhaustion,
+            "attendance_score": attendance_score,
+            "activity_level": activity_level,
+            "performance_score": performance_score,
+            "social_withdrawal": social_withdrawal,
+            "behavioral_change": behavioral_change,
+            "age": age,
+            "service_years": service_years,
+            "rank_level": rank_level,
+            "transfer_frequency": transfer_frequency,
+            "training_hours": training_hours,
+            "deployment_days": deployment_days,
+            "deployment_frequency": deployment_frequency,
+            "operational_exposure": operational_exposure,
+            "leave_days": leave_days,
+            "days_since_last_leave": days_since_last_leave,
+            "leave_frequency": leave_frequency
+        }])
+
+        # Run the trained ML model.
+        prediction, confidence = predict_ml_burnout(
+            new_person
+        )
+
+        predicted_risk = prediction.iloc[0]
+        predicted_confidence = confidence.iloc[0]
+
+        st.divider()
+
+        st.subheader("🤖 AI Prediction Result")
+
+        r1, r2 = st.columns(2)
+
+        with r1:
+            st.metric(
+                "Predicted Burnout Risk",
+                predicted_risk
+            )
+
+        with r2:
+            st.metric(
+                "Prediction Confidence",
+                f"{predicted_confidence:.1f}%"
+            )
+
+        st.success(
+            f"Personnel {personnel_id} has been assessed "
+            f"with an AI burnout-risk category of "
+            f"**{predicted_risk}**."
+        )
+
+        st.caption(
+            "This prediction supports welfare decision-making "
+            "and is not a medical diagnosis."
+        )
+
+        st.divider()
+
+        st.subheader("📋 Submitted Personnel Information")
+
+        display_data = new_person.copy()
+        display_data.insert(
+            0,
+            "personnel_id",
+            personnel_id
+        )
+
+        display_data["ai_burnout_risk"] = predicted_risk
+        display_data["ai_burnout_confidence"] = (
+            predicted_confidence
+        )
+
+        st.dataframe(
+            display_data,
+            use_container_width=True,
+            hide_index=True
         )
 
 
