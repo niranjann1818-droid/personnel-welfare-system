@@ -43,6 +43,22 @@ if not st.session_state.logged_in:
 
     st.markdown("""
     <style>
+   .stApp p,
+.stApp label {
+    color: #172033 !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #0f172a !important;
+}
+
+[data-testid="stCaptionContainer"] {
+    color: #475569 !important;
+}
+
+[data-testid="stWidgetLabel"] label {
+    color: #172033 !important;
+}
 
     /* Background */
     .stApp {
